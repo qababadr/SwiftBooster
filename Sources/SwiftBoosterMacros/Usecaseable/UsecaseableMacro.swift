@@ -17,17 +17,21 @@ public struct UsecaseableMacro: PeerMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
 
-        guard let protocolDecl = declaration.as(ProtocolDeclSyntax.self) else {
+        guard let protocolDecl = declaration.as(ProtocolDeclSyntax.self)
+        else {
             return []
         }
 
         let protocolName = protocolDecl.name.text
 
         var useCases: [String] = []
+        var properties: [String] = []
+        var initializers: [String] = []
 
         for member in protocolDecl.memberBlock.members {
 
-            guard let function = member.decl.as(FunctionDeclSyntax.self) else {
+            guard let function = member.decl.as(FunctionDeclSyntax.self)
+            else {
                 continue
             }
 
@@ -38,42 +42,106 @@ public struct UsecaseableMacro: PeerMacro {
                 + functionName.dropFirst()
                 + "UseCase"
 
-            // PARAMETERS
-            let parameters = function.signature.parameterClause.parameters
+            properties.append(
+                "public let \(functionName): \(useCaseName)"
+            )
+
+            initializers.append(
+                "self.\(functionName) = \(useCaseName)(repository: repository)"
+            )
+
+            // MARK: - Parameters
+
+            let parameters = function
+                .signature
+                .parameterClause
+                .parameters
 
             let parameterList = parameters.map { param in
+
                 let label = param.firstName.text
                 let type = param.type.trimmedDescription
+
                 return "\(label): \(type)"
-            }.joined(separator: ", ")
+            }
+            .joined(separator: ", ")
 
             let callArguments = parameters.map { param in
+
                 let label = param.firstName.text
+
                 return "\(label): \(label)"
-            }.joined(separator: ", ")
+            }
+            .joined(separator: ", ")
 
-            // RETURN TYPE
+            // MARK: - Return Type
+
             let returnType =
-                function.signature.returnClause?.type.trimmedDescription ?? "Void"
+                function.signature.returnClause?.type.trimmedDescription
+                ?? "Void"
 
-            // EFFECTS
-            let isAsync = function.signature.effectSpecifiers?.asyncSpecifier != nil
-            let isThrows = function.signature.effectSpecifiers?.throwsClause != nil
+            // MARK: - Effects
+
+            let isAsync =
+                function.signature.effectSpecifiers?.asyncSpecifier != nil
+
+            let isThrows =
+                function.signature.effectSpecifiers?.throwsClause != nil
 
             let asyncKeyword = isAsync ? "async" : ""
             let throwsKeyword = isThrows ? "throws" : ""
 
-            let signatureEffects = [asyncKeyword, throwsKeyword]
-                .filter { !$0.isEmpty }
-                .joined(separator: " ")
+            let signatureEffects = [
+                asyncKeyword,
+                throwsKeyword
+            ]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
 
-            // USE CASE (NESTED ACTOR)
+            // MARK: - Repository Call
+
+            let repositoryCall: String
+
+            switch (isAsync, isThrows) {
+
+            case (true, true):
+                repositoryCall =
+                "try await repository.\(functionName)(\(callArguments))"
+
+            case (true, false):
+                repositoryCall =
+                "await repository.\(functionName)(\(callArguments))"
+
+            case (false, true):
+                repositoryCall =
+                "try repository.\(functionName)(\(callArguments))"
+
+            case (false, false):
+                repositoryCall =
+                "repository.\(functionName)(\(callArguments))"
+            }
+
+            let body: String
+
+            if returnType == "Void" {
+
+                body = repositoryCall
+
+            } else {
+
+                body = "return \(repositoryCall)"
+            }
+
+            // MARK: - Use Case
+
             let useCase = """
             public actor \(useCaseName) {
 
                 public let repository: \(protocolName)
 
-                public init(repository: \(protocolName)) {
+                public init(
+                    repository: \(protocolName)
+                ) {
                     self.repository = repository
                 }
 
@@ -81,9 +149,7 @@ public struct UsecaseableMacro: PeerMacro {
                     \(parameterList)
                 ) \(signatureEffects) -> \(returnType) {
 
-                    return try await repository.\(functionName)(
-                        \(callArguments)
-                    )
+                    \(body)
                 }
             }
             """
@@ -92,9 +158,16 @@ public struct UsecaseableMacro: PeerMacro {
         }
 
         let source = """
-        public struct \(protocolName)UseCases {
+        public actor \(protocolName)UseCases {
 
-        public let getProductsIds: GetProductsIdsUseCase
+        \(properties.joined(separator: "\n"))
+
+        public init(
+            repository: \(protocolName)
+        ) {
+
+        \(initializers.joined(separator: "\n"))
+        }
 
         \(useCases.joined(separator: "\n\n"))
 
@@ -102,7 +175,9 @@ public struct UsecaseableMacro: PeerMacro {
         """
 
         return [
-            DeclSyntax(stringLiteral: source)
+            DeclSyntax(
+                stringLiteral: source
+            )
         ]
     }
 }

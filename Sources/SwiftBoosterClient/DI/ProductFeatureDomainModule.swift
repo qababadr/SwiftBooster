@@ -25,8 +25,6 @@ public struct ProductFeatureDomainModule {
         {
             guard let repository = resolver.resolve(ProductRepository.self)
             else { throw NSError(domain: "ProductRepository not found", code: 401) }
-            return ProductRepositoryUseCases(
-                getProductsIds: ProductRepositoryUseCases.GetProductsIdsUseCase(repository: repository)
-            )
+            return ProductRepositoryUseCases(repository: repository)
         }
 }
