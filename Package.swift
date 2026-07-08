@@ -6,17 +6,17 @@ import CompilerPluginSupport
 let package = Package(
     name: "SwiftBooster",
     platforms: [
-        // .macOS(.v12),
+        .macOS(.v10_13),
         .iOS(.v13),
-        // .tvOS(.v13),
-        // .watchOS(.v6),
-        // .macCatalyst(.v13)
+        .tvOS(.v13),
+        .watchOS(.v6),
+        .macCatalyst(.v13)
     ],
     products: [
         .library(
             name: "SwiftBooster",
             targets: ["SwiftBooster"]
-        )
+        ),
     ],
     dependencies: [
         .package(
