@@ -6,7 +6,7 @@ import CompilerPluginSupport
 let package = Package(
     name: "SwiftBooster",
     platforms: [
-        .macOS(.v10_13),
+        .macOS(.v12),
         .iOS(.v13),
         .tvOS(.v13),
         .watchOS(.v6),
