@@ -8,6 +8,7 @@
 public enum ValidationRule: Equatable {
     case required
     case email
+    case url
     case minLength(Int)
     case maxLength(Int)
     case equalsTo(String)

@@ -5,9 +5,9 @@
 //  Created by BADR  QABA on 2026-06-15.
 //
 
+import Foundation
 import SwiftSyntax
 import SwiftSyntaxMacros
-import Foundation
 
 public struct ValidateMacro: PeerMacro {
 
@@ -18,8 +18,8 @@ public struct ValidateMacro: PeerMacro {
     ) throws -> [DeclSyntax] {
 
         guard let variable = declaration.as(VariableDeclSyntax.self),
-              let binding = variable.bindings.first,
-              let identifier = binding.pattern.as(IdentifierPatternSyntax.self)
+            let binding = variable.bindings.first,
+            let identifier = binding.pattern.as(IdentifierPatternSyntax.self)
         else {
             return []
         }
@@ -55,16 +55,19 @@ public struct ValidateMacro: PeerMacro {
 
         for attributeElement in variable.attributes {
 
-            guard let attribute = attributeElement.as(AttributeSyntax.self) else {
+            guard let attribute = attributeElement.as(AttributeSyntax.self)
+            else {
                 continue
             }
 
-            guard attribute.attributeName.trimmedDescription == "Validate" else {
+            guard attribute.attributeName.trimmedDescription == "Validate"
+            else {
                 continue
             }
 
-            guard let args = attribute.arguments?.as(LabeledExprListSyntax.self),
-                  let expression = args.first?.expression
+            guard
+                let args = attribute.arguments?.as(LabeledExprListSyntax.self),
+                let expression = args.first?.expression
             else {
                 continue
             }
@@ -88,7 +91,8 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("equalsTo") {
 
-                let otherProperty = value
+                let otherProperty =
+                    value
                     .replacingOccurrences(of: ".equalsTo(", with: "")
                     .replacingOccurrences(of: ")", with: "")
                     .replacingOccurrences(of: "\"", with: "")
@@ -100,7 +104,8 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("minLength") {
 
-                let count = value
+                let count =
+                    value
                     .replacingOccurrences(of: ".minLength(", with: "")
                     .replacingOccurrences(of: ")", with: "")
 
@@ -111,7 +116,8 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("maxLength") {
 
-                let count = value
+                let count =
+                    value
                     .replacingOccurrences(of: ".maxLength(", with: "")
                     .replacingOccurrences(of: ")", with: "")
 
@@ -122,20 +128,23 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("length") {
 
-                let parameters = value
+                let parameters =
+                    value
                     .replacingOccurrences(of: ".length(", with: "")
                     .replacingOccurrences(of: ")", with: "")
                     .split(separator: ",")
 
-                let min = Int(
-                    parameters.first?
-                        .trimmingCharacters(in: .whitespaces) ?? ""
-                ) ?? 0
+                let min =
+                    Int(
+                        parameters.first?
+                            .trimmingCharacters(in: .whitespaces) ?? ""
+                    ) ?? 0
 
-                let max = Int(
-                    parameters.last?
-                        .trimmingCharacters(in: .whitespaces) ?? ""
-                ) ?? 0
+                let max =
+                    Int(
+                        parameters.last?
+                            .trimmingCharacters(in: .whitespaces) ?? ""
+                    ) ?? 0
 
                 condition = generateLength(
                     propertyName: propertyName,
@@ -151,7 +160,8 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("pattern") {
 
-                let pattern = value
+                let pattern =
+                    value
                     .replacingOccurrences(of: ".pattern(", with: "")
                     .replacingOccurrences(of: ")", with: "")
                     .replacingOccurrences(of: "\"", with: "")
@@ -163,20 +173,23 @@ public struct ValidateMacro: PeerMacro {
 
             } else if value.contains("range") {
 
-                let parameters = value
+                let parameters =
+                    value
                     .replacingOccurrences(of: ".range(", with: "")
                     .replacingOccurrences(of: ")", with: "")
                     .split(separator: ",")
 
-                let min = Double(
-                    parameters.first?
-                        .trimmingCharacters(in: .whitespaces) ?? ""
-                ) ?? 0
+                let min =
+                    Double(
+                        parameters.first?
+                            .trimmingCharacters(in: .whitespaces) ?? ""
+                    ) ?? 0
 
-                let max = Double(
-                    parameters.last?
-                        .trimmingCharacters(in: .whitespaces) ?? ""
-                ) ?? 0
+                let max =
+                    Double(
+                        parameters.last?
+                            .trimmingCharacters(in: .whitespaces) ?? ""
+                    ) ?? 0
 
                 condition = generateRange(
                     propertyName: propertyName,
@@ -184,6 +197,8 @@ public struct ValidateMacro: PeerMacro {
                     max: max
                 )
 
+            } else if value == ".url" {
+                condition = generateUrl(propertyName: propertyName)
             } else {
                 continue
             }
@@ -198,11 +213,13 @@ public struct ValidateMacro: PeerMacro {
         let body = conditions.joined(separator: " || ")
 
         return [
-            DeclSyntax(stringLiteral: """
-            public var has\(capitalized)Error: Bool {
-                \(body)
-            }
-            """)
+            DeclSyntax(
+                stringLiteral: """
+                    public var has\(capitalized)Error: Bool {
+                        \(body)
+                    }
+                    """
+            )
         ]
     }
 
@@ -240,7 +257,7 @@ public struct ValidateMacro: PeerMacro {
     ) -> String {
         "\(propertyName).count > \(length)"
     }
-    
+
     private static func generateLength(
         propertyName: String,
         min: Int,
@@ -278,5 +295,25 @@ public struct ValidateMacro: PeerMacro {
         max: Double
     ) -> String {
         "\(propertyName) < \(min) || \(propertyName) > \(max)"
+    }
+
+    private static func generateUrl(
+        propertyName: String
+    ) -> String {
+
+        """
+        {
+            guard
+                let url = URL(string: \(propertyName)),
+                let scheme = url.scheme,
+                ["http", "https"].contains(scheme.lowercased()),
+                url.host != nil
+            else {
+                return true
+            }
+
+            return false
+        }()
+        """
     }
 }
