@@ -264,7 +264,7 @@ public struct ValidateMacro: PeerMacro {
         {
             let regex = NSPredicate(
                 format: "SELF MATCHES %@",
-                "\(pattern)"
+                \(pattern)
             )
 
             return !regex.evaluate(with: \(propertyName))
