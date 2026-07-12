@@ -7,10 +7,7 @@ let package = Package(
     name: "SwiftBooster",
     platforms: [
         .macOS(.v12),
-        .iOS(.v13),
-        .tvOS(.v13),
-        .watchOS(.v6),
-        .macCatalyst(.v13)
+        .iOS(.v15),
     ],
     products: [
         .library(

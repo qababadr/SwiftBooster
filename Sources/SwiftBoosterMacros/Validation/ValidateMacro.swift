@@ -158,19 +158,18 @@ public struct ValidateMacro: PeerMacro {
                     propertyName: propertyName
                 )
 
-            } else if value.contains("pattern") {
-
-                let pattern =
+            } else if value.hasPrefix(".pattern(\"") && value.hasSuffix("\")") {
+                
+                let pattern = String(
                     value
-                    .replacingOccurrences(of: ".pattern(", with: "")
-                    .replacingOccurrences(of: ")", with: "")
-                    .replacingOccurrences(of: "\"", with: "")
+                        .dropFirst(".pattern(\"".count)
+                        .dropLast(2)
+                )
 
                 condition = generatePattern(
                     propertyName: propertyName,
                     pattern: pattern
                 )
-
             } else if value.contains("range") {
 
                 let parameters =
@@ -281,7 +280,7 @@ public struct ValidateMacro: PeerMacro {
         {
             let regex = NSPredicate(
                 format: "SELF MATCHES %@",
-                \(pattern)
+                "\(pattern)"
             )
 
             return !regex.evaluate(with: \(propertyName))
